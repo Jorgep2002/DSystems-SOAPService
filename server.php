@@ -1,5 +1,12 @@
 <?php
 
+// Cargar autoload de Composer para poder usar las dependencias instaladas
+require_once 'vendor/autoload.php';
+
+// Cargar las variables de entorno desde el archivo .env
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->load();
+
 require_once "vendor/econea/nusoap/src/nusoap.php";
 require_once "controller/authService.php";
 
@@ -18,9 +25,9 @@ function registerPerson($userId, $email, $password, $name, $status, $rol) {
     return $authService->registerPerson($userId, $email, $password, $name, $status, $rol);
 }
 
-function getAllPersons() {
+function getAllPersons($token) {
     global $authService;
-    return $authService->getAllPersons();
+    return $authService->getAllPersons($token);
 }
 
 function login($email, $password) {
@@ -29,7 +36,6 @@ function login($email, $password) {
 }
 
 // Registrar los métodos en el servidor SOAP
-
 $server->register(
     "registerPerson",
     array('userId' => 'xsd:int', 'email' => 'xsd:string', 'password' => 'xsd:string', 'name' => 'xsd:string', 'status' => 'xsd:string', 'rol' => 'xsd:string'),
@@ -43,7 +49,7 @@ $server->register(
 
 $server->register(
     "getAllPersons",
-    array(),
+    array('token' => 'xsd:string'),
     array('return' => 'xsd:string'),
     $nameSpace,
     false,

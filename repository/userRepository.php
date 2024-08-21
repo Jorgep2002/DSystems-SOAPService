@@ -41,6 +41,16 @@ class UserRepository {
         }
         return false;
     }
+
+    // Método para obtener un usuario por su email
+    public function getUserByEmail($email) {
+        foreach ($this->personas as $persona) {
+            if ($persona->getEmail() === $email) {
+                return $persona;
+            }
+        }
+        return null;
+    }
 }
 
 ?>
