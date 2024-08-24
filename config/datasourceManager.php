@@ -19,12 +19,12 @@ echo "Base de Datos: $db\n";
 
 $conexion = new mysqli($server, $user, $pass, $db);
 
-// if($conexion->connect_errno){
-//     die("Conexion Fallida" . $conexion->connect_errno);
+if($conexion->connect_errno){
+    die("Conexion Fallida" . $conexion->connect_errno);
 
-// }else{
-//     echo "conectado";
-// }
+}else{
+    echo "conectado";
+}
 
 
 ?>
