@@ -1,56 +1,108 @@
 <?php
 
 require_once 'models/persona.php';
+require_once 'config/datasourceManager.php';
 
 class UserRepository {
-    private $personas;
+    private $conexion;
 
-    public function __construct() {
-        // Inicializar la lista de personas con algunos objetos Persona predefinidos
-        $this->personas = [
-            new Persona(1, "juan.perez@example.com", "password123", "Juan Pérez", "activo", "admin"),
-            new Persona(2, "ana.garcia@example.com", "password123", "Ana García", "activo", "user"),
-            new Persona(3, "luis.martinez@example.com", "password123", "Luis Martínez", "activo", "user")
-        ];
+    public function __construct(DataSourceManager $dataSourceManager) {
+        $this->conexion = $dataSourceManager->getConexion();
     }
 
     // Método para registrar una persona
-    public function addPerson($userId, $email, $password, $name, $status, $rol) {
+    public function addPerson($email, $password, $name, $status, $rol) {
+        $stmt = null; // Definir $stmt antes del bloque try
         try {
-            $nuevaPersona = new Persona($userId, $email, $password, $name, $status, $rol);
-            $this->personas[] = $nuevaPersona;
-            return true;
+            // Generar un ID único para el usuario
+            $userId = uniqid('user_', true);
+            
+            // Preparar la consulta SQL
+            $query = "INSERT INTO users (user_id, email, password, name, status, rol) VALUES (?, ?, ?, ?, ?, ?)";
+            $stmt = $this->conexion->prepare($query);
+
+            if ($stmt === false) {
+                throw new Exception('Error en la preparación de la consulta: ' . $this->conexion->error);
+            }
+
+            // Encriptar la contraseña antes de guardarla en la base de datos
+            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+            // Vincular los parámetros a la consulta
+            $stmt->bind_param("ssssss", $userId, $email, $hashedPassword, $name, $status, $rol);
+
+            // Ejecutar la consulta
+            if ($stmt->execute()) {
+                return true;
+            } else {
+                throw new Exception('Error al ejecutar la consulta: ' . $stmt->error);
+            }
         } catch (Exception $e) {
+            // Manejar la excepción
             return false;
+        } finally {
+            // Cerrar la declaración si fue inicializada
+            if ($stmt !== null) {
+                $stmt->close();
+            }
         }
     }
 
     // Método para obtener todas las personas registradas
     public function getAllPersons() {
-        return array_map(function($persona) {
-            return $persona->toArray();
-        }, $this->personas);
+        $query = "SELECT user_id, email, name, status, rol FROM users";
+        $result = $this->conexion->query($query);
+
+        if ($result === false) {
+            return [];
+        }
+
+        $personas = [];
+        while ($row = $result->fetch_assoc()) {
+            $personas[] = $row;
+        }
+
+        return $personas;
     }
 
     // Método para autenticar un usuario
     public function authenticate($email, $password) {
-        foreach ($this->personas as $persona) {
-            if ($persona->getEmail() === $email && $persona->getPassword() === $password) {
-                return true;
-            }
+        $query = "SELECT user_id, email, password, name, status, rol FROM users WHERE email = ?";
+        $stmt = $this->conexion->prepare($query);
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            return false;
         }
-        return false;
+
+        $user = $result->fetch_assoc();
+        return password_verify($password, $user['password']);
     }
 
     // Método para obtener un usuario por su email
     public function getUserByEmail($email) {
-        foreach ($this->personas as $persona) {
-            if ($persona->getEmail() === $email) {
-                return $persona;
-            }
+        $query = "SELECT user_id, email, name, status, rol FROM users WHERE email = ?";
+        $stmt = $this->conexion->prepare($query);
+        $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        if ($result->num_rows === 0) {
+            return null;
         }
-        return null;
+
+        $user = $result->fetch_assoc();
+
+        return new Persona(
+            $user['user_id'],
+            $user['email'],
+            '',
+            $user['name'],
+            $user['status'],
+            $user['rol']
+        );
     }
 }
-
 ?>

@@ -13,9 +13,7 @@ class Persona {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception("Email no válido");
         }
-        if (!is_numeric($userId)) {
-            throw new Exception("El ID de usuario debe ser numérico");
-        }
+        
 
         $this->userId = $userId;
         $this->email = $email;

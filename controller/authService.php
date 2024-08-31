@@ -1,6 +1,7 @@
 <?php
 
 require_once 'repository/userRepository.php';
+require_once 'models/persona.php';
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
 
@@ -9,7 +10,10 @@ class AuthService {
     private $secretKey;
 
     public function __construct() {
-        $this->userRepository = new UserRepository();
+        $dataSourceManager = new DataSourceManager();
+
+        // Pasar la instancia de DataSourceManager a UserRepository
+        $this->userRepository = new UserRepository($dataSourceManager);
         $this->secretKey = $_ENV['JWT_SECRET_KEY'];
     }
 
@@ -17,14 +21,13 @@ class AuthService {
         return $this->secretKey;
     }
 
-
     // Método para registrar una persona
-    public function registerPerson($userId, $email, $password, $name, $status, $rol) {
-        $success = $this->userRepository->addPerson($userId, $email, $password, $name, $status, $rol);
+    public function registerPerson($email, $password, $name, $status, $rol) {
+        $success = $this->userRepository->addPerson($email, $password, $name, $status, $rol);
         if ($success) {
-            return "Persona registrada correctamente.";
+            return json_encode(['message' => 'Persona registrada correctamente.']);
         } else {
-            return "Error al registrar la persona.";
+            return json_encode(['message' => 'Error al registrar la persona.']);
         }
     }
 
@@ -32,8 +35,9 @@ class AuthService {
     public function getAllPersons($token) {
         // Validar el token JWT
         if ($this->validateToken($token)) {
-            // Lógica para obtener todas las personas
-            return json_encode($this->fetchAllPersons());
+            // Obtener todas las personas
+            $persons = $this->userRepository->getAllPersons();
+            return json_encode($persons);
         } else {
             return json_encode(['error' => 'Invalid token']);
         }
@@ -47,14 +51,8 @@ class AuthService {
             return false;
         }
     }
-    
 
-    private function fetchAllPersons() {
-        // Lógica para obtener todas las personas desde la base de datos
-        return $this->userRepository->getAllPersons();
-    }
-
-    // Método para login con JWT.
+    // Método para login con JWT
     public function login($email, $password) {
         $authenticated = $this->userRepository->authenticate($email, $password);
         if ($authenticated) {
@@ -66,7 +64,8 @@ class AuthService {
                     'userId' => $user->getUserId(),
                     'email' => $user->getEmail(),
                     'rol' => $user->getRol()
-            ]];
+                ]
+            ];
 
             $jwt = JWT::encode($payload, $this->secretKey, 'HS256');
             return json_encode(['message' => 'Logueado correctamente', 'token' => $jwt]);
