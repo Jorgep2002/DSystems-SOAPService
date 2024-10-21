@@ -74,6 +74,15 @@ class AuthService {
             return json_encode(['message' => 'Email o contraseña incorrectos']);
         }
     }
+
+    public function authenticate($token) {
+        // Validar el token JWT
+        if ($this->validateToken($token)) {
+            return json_encode(['message' => 'Token valido']);
+        } else {
+            return json_encode(['error' => 'Token invalido']);
+        }
+    }
 }
 
 ?>

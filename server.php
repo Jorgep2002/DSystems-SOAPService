@@ -30,9 +30,14 @@ function getAllPersons($token) {
     return $authService->getAllPersons($token);
 }
  
-function login($email, $password) {
+function login($email, $password): bool|string {
     global $authService;
     return $authService->login($email, $password);
+}
+
+function authenticate($token): string {
+    global $authService;
+    return $authService->authenticate($token);
 }
  
 // Registrar los métodos en el servidor SOAP
@@ -68,6 +73,17 @@ $server->register(
     'rpc',
     'encoded',
     'Realiza login simple con un email y contraseña'
+);
+
+$server->register(
+    "authenticate",
+    array('token' => 'xsd:string'),
+    array('return' => 'xsd:string'),
+    $nameSpace,
+    false,
+    'rpc',
+    'encoded',
+    'Autentica un usuario con un token'
 );
 
  
